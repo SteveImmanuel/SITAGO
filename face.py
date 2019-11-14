@@ -66,10 +66,16 @@ if __name__ == '__main__':
         if len(sys.argv) < 2:
             raise Exception('Usage: python face.py <image to test>')
 
-        file_test = sys.argv[1]
-        if os.path.isfile(file_test):
-            print("Found : {}".format(testFace(file_test)))
+        if sys.argv[1] == 'enroll':
+            if len(sys.argv) < 4:
+                raise Exception('Usage: python face.py enroll <image> <name>')
+            else:
+                createFaceData(sys.argv[2], sys.argv[3])
         else:
-            raise Exception('Test file not found')
+            file_test = sys.argv[1]
+            if os.path.isfile(file_test):
+                print("Found : {}".format(testFace(file_test)))
+            else:
+                raise Exception('Test file not found')
     except Exception as err:
         print("Err: {}".format(err))
