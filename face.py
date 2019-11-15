@@ -58,7 +58,10 @@ def testFace(image_path: str):
 
     result_face_index = [i for i, result in enumerate(result_list) if result]
 
-    return face_names[result_face_index[0]]
+    if len(result_face_index) >= 1:
+        return face_names[result_face_index[0]]
+    else:
+        return None
 
 
 if __name__ == '__main__':
