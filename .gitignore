@@ -111,3 +111,5 @@ dmypy.json
 
 *.sqlite3
 *.face
+*.jpeg
+*.jpg

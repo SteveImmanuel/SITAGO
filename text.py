@@ -1,26 +1,49 @@
 import sqlite3
 import difflib
 from typing import List, Tuple
-
+from datetime import datetime
 
 class textParser:
     def __init__(self, *args):
         if len(args) <= 1:
-            db_name = args if args else 'db.sqlite3'
+            db_name = args[0] if args else 'db.sqlite3'
             self.conn = sqlite3.connect(db_name)
             self.cursor = self.conn.cursor()
 
-            self.cursor.execute('DROP TABLE foodType')
-            self.cursor.execute('DROP TABLE keyword')
+            try:
+                self.cursor.execute('DROP TABLE foodType')
+                self.cursor.execute('DROP TABLE keyword')
+                self.cursor.execute('DROP TABLE transactions')
 
-            self.conn.commit()
-
+                self.conn.commit()
+            except:
+                pass
             # Init table
             self.cursor.execute(
                 """
             CREATE TABLE IF NOT EXISTS foodType(
                 id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                 name VARCHAR(60) NOT NULL
+            );"""
+            )
+            self.cursor.execute(
+                """
+            CREATE TABLE IF NOT EXISTS keyword(
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                foodId INTEGER NOT NULL,
+                keyword VARCHAR(60) NOT NULL,
+                FOREIGN KEY(foodId) REFERENCES foodType(id) 
+            );"""
+            )
+            self.cursor.execute(
+                """
+            CREATE TABLE IF NOT EXISTS transactions(
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                sender VARCHAR(20) NOT NULL,
+                time timestamp NOT NULL,
+                foodId INTEGER NOT NULL,
+                amount INTEGER NOT NULL,
+                FOREIGN KEY(foodId) REFERENCES foodType(id) 
             );"""
             )
             self.cursor.execute(
@@ -63,7 +86,7 @@ class textParser:
         self.cursor.execute('INSERT INTO keyword(foodId, keyword) VALUES (?,?)', (type_id, keyword))
         self.conn.commit()
 
-    def parseInput(self, text_input: str) -> Tuple[int, str]:
+    def parseInput(self, text_input: str) -> Tuple[int, str, int]:
         number_in_text = [int(s) for s in text_input.split() if s.isdigit()]
 
         if len(number_in_text) == 0:
@@ -88,10 +111,18 @@ class textParser:
 
             print('DEBUG: match = {}'.format(food_match_name))
 
-            return (food_match_id, food_match_name)
+            return (food_match_id, food_match_name, item_number)
         else:
             print('DEBUG: no match')
-            return (None, None)
+            return (None, None, None)
+
+    def addTransaction(self, sender: str, foodId: int, amount: int) -> None:
+        self.cursor.execute('INSERT INTO transactions(sender, time, foodId, amount) VALUES (?,?,?,?)', (sender, datetime.now(), foodId, amount))
+        self.conn.commit()
+
+    def getAllTransactions(self):
+        data = self.cursor.execute('SELECT * FROM transactions')
+        return data.fetchall()
 
 
 if __name__ == '__main__':
@@ -108,10 +139,13 @@ if __name__ == '__main__':
     parser.addKeyword(2, 'ayam blackpaper')
     parser.addKeyword(2, 'ayam blackpepper')
 
-    print(parser.parseInput('Ayam geprek 1'))
-    print(parser.parseInput('Ayam gprk 2'))
-    print(parser.parseInput('gprk 3'))
-    print(parser.parseInput('geprek 4'))
+    parser.addTransaction('09238492',2,4)
+    print(parser.getAllTransactions())
 
-    print(parser.parseInput('aym bbq 5'))
-    print(parser.parseInput('ayam blckpaper 6'))
+    # print(parser.parseInput('Ayam geprek 1'))
+    # print(parser.parseInput('Ayam gprk 2'))
+    # print(parser.parseInput('gprk 3'))
+    # print(parser.parseInput('geprek 4'))
+
+    # print(parser.parseInput('aym bbq 5'))
+    # print(parser.parseInput('ayam blckpaper 6'))
