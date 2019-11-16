@@ -5,7 +5,8 @@ from flask import Flask, request
 import requests
 from twilio.twiml.messaging_response import MessagingResponse
 from face import faceParser
-from text import textParser, responseGenerator
+from text import textParser
+from responseGenerator import responseGenerator
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData, Column, Integer, String, Table
 from hashlib import md5
