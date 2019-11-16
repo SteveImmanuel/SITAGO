@@ -4,19 +4,20 @@ from urllib.parse import urlparse
 from flask import Flask, request
 import requests
 from twilio.twiml.messaging_response import MessagingResponse
-from face import faceParser
-from text import textParser
-from responseGenerator import responseGenerator
+from face import FaceParser
+from text import TextParser
+from record import Record
+from responseGenerator import ResponseGenerator
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import MetaData, Column, Integer, String, Table
-from hashlib import md5
+from sqlalchemy import MetaData, Column, Integer, String, Table, ForeignKey, DateTime
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///sitago.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-requestParser = textParser(engine=db.engine)
-imageParser = faceParser()
+requestParser = TextParser(engine=db.engine)
+imageParser = FaceParser()
+record = Record(engine=db.engine)
 
 
 @app.route('/')
@@ -35,7 +36,7 @@ def reply_whatsapp():
         try:
             transactions = requestParser.parseInput(request_message)
             for transaction in transactions:
-                requestParser.addTransaction(transaction[0], transaction[1], transaction[2])
+                record.addTransaction(sender, transaction[0], transaction[2])
             response_message = responseGenerator.generateTransactionTable(transactions)
             response.message(response_message)  # generate success message
         except:
@@ -53,21 +54,15 @@ def reply_whatsapp():
             media_sid = os.path.basename(urlparse(media_url).path)
             file_path = f'received_images/{media_sid}{file_extension}'
 
-            md5_hasher = md5()
-            md5_hasher.update(req.content)
-
-            md5_hash = md5_hasher.hexdigest()
-
-            result = db.engine.execute('SELECT * FROM imageHash WHERE hash = ?', (md5_hash, ))
-
-            if len(result.fetchall()) >= 1:
+            if not record.calculateAndCheckHash(req.content):
                 response.message('PERINGATAN!!! Anda menggunakan foto yang sama!')
                 return str(response)
 
             with open(file_path, 'wb') as f:
                 f.write(req.content)
 
-            db.engine.execute('INSERT INTO imageHash(hash) VALUES (?)', (md5_hash, ))
+            record.addPresence(sender)
+
         try:
             person = imageParser.testFace(file_path)
             if person == None:
@@ -82,11 +77,44 @@ def reply_whatsapp():
 if __name__ == '__main__':
     metadata = MetaData()
 
+    food_type = Table(
+        'foodType',
+        metadata,
+        Column('id', Integer, primary_key=True),
+        Column('name', String, nullable=False),
+    )
+
+    keyword = Table(
+        'keyword',
+        metadata,
+        Column('id', Integer, primary_key=True),
+        Column('foodId', None, ForeignKey('foodType.id'), nullable=False),
+        Column('keyword', String, nullable=False),
+    )
+
+    presence = Table(
+        'presenceEmployee',
+        metadata,
+        Column('id', Integer, primary_key=True),
+        Column('sender', String(20), nullable=False),
+        Column('time', DateTime, nullable=False),
+    )
+
     image_hash = Table(
         'imageHash',
         metadata,
         Column('id', Integer, primary_key=True),
         Column('hash', String(32), nullable=False),
+    )
+
+    transaction = Table(
+        'storeTransaction',
+        metadata,
+        Column('id', Integer, primary_key=True),
+        Column('sender', String(20), nullable=False),
+        Column('time', DateTime, nullable=False),
+        Column('foodId', None, ForeignKey('foodType.id'), nullable=False),
+        Column('amount', Integer, nullable=False),
     )
 
     metadata.create_all(db.engine)

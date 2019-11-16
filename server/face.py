@@ -14,7 +14,7 @@ class FaceData():
     face_names: List[str]
 
 
-class faceParser():
+class FaceParser():
     def __init__(self, *args):
         if len(args) == 1:
             self.loadFace(args[0])
@@ -68,7 +68,7 @@ class faceParser():
 
 if __name__ == '__main__':
     try:
-        parser = faceParser()
+        parser = FaceParser()
 
         if len(sys.argv) < 2:
             raise Exception('Usage: python face.py <image to test>')
