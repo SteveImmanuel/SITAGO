@@ -49,7 +49,12 @@ class faceParser():
         face_names = self.face_data.face_names
 
         test_picture = face_recognition.load_image_file(image_path)
-        test_feature = face_recognition.face_encodings(test_picture)[0]
+        test_feature = face_recognition.face_encodings(test_picture)
+
+        if len(face_recognition.face_encodings(test_picture)) < 1:
+            raise Exception('No face detected')
+
+        test_feature = test_feature[0]
 
         result_list = face_recognition.compare_faces(face_features, test_feature)
 
