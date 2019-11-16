@@ -4,8 +4,8 @@ from urllib.parse import urlparse
 from flask import Flask, request
 import requests
 from twilio.twiml.messaging_response import MessagingResponse
-from face import *
-from text import *
+from face import faceParser
+from text import textParser
 
 app = Flask(__name__)
 requestParser = textParser('dbSITAGO')
