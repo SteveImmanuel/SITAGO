@@ -1,96 +1,84 @@
-import sqlite3
+from sqlalchemy import create_engine, Table, Column, Integer, String, ForeignKey, MetaData, DateTime
 import difflib
 from typing import List, Tuple
 from datetime import datetime
 import re
+import logging
+import sys
+
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format='%(levelname)s: %(message)s')
+
 
 class textParser:
-    def __init__(self, *args):
-        if len(args) <= 1:
-            db_name = args[0] if args else 'db.sqlite3'
-            self.conn = sqlite3.connect(db_name)
-            self.cursor = self.conn.cursor()
-
-            try:
-                self.cursor.execute('DROP TABLE foodType')
-                self.cursor.execute('DROP TABLE keyword')
-                self.cursor.execute('DROP TABLE transactions')
-
-                self.conn.commit()
-            except:
-                pass
-            # Init table
-            self.cursor.execute(
-                """
-            CREATE TABLE IF NOT EXISTS foodType(
-                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                name VARCHAR(60) NOT NULL
-            );"""
-            )
-            self.cursor.execute(
-                """
-            CREATE TABLE IF NOT EXISTS keyword(
-                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                foodId INTEGER NOT NULL,
-                keyword VARCHAR(60) NOT NULL,
-                FOREIGN KEY(foodId) REFERENCES foodType(id) 
-            );"""
-            )
-            self.cursor.execute(
-                """
-            CREATE TABLE IF NOT EXISTS transactions(
-                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                sender VARCHAR(20) NOT NULL,
-                time timestamp NOT NULL,
-                foodId INTEGER NOT NULL,
-                amount INTEGER NOT NULL,
-                FOREIGN KEY(foodId) REFERENCES foodType(id) 
-            );"""
-            )
-            self.cursor.execute(
-                """
-            CREATE TABLE IF NOT EXISTS keyword(
-                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                foodId INTEGER NOT NULL,
-                keyword VARCHAR(60) NOT NULL,
-                FOREIGN KEY(foodId) REFERENCES foodType(id) 
-            );"""
-            )
-            self.conn.commit()
-
-        elif len(args) == 2:
-            self.conn = args[0]
-            self.cursor = args[1]
+    def __init__(self, *args, **kwargs):
+        if 'engine' in kwargs:
+            self.engine = kwargs['engine']
         else:
-            raise Exception('Invalid constructor')
+            db_name = kwargs['db'] if 'db' in kwargs else 'db.sqlite3'
+            self.engine = create_engine('sqlite:///{}'.format(db_name))
 
-    def __del__(self):
-        self.conn.close()
+            metadata = MetaData()
+
+            food_type = Table(
+                'foodType',
+                metadata,
+                Column('id', Integer, primary_key=True),
+                Column('name', String, nullable=False),
+            )
+
+            keyword = Table(
+                'keyword',
+                metadata,
+                Column('id', Integer, primary_key=True),
+                Column('foodId', None, ForeignKey('foodType.id'), nullable=False),
+                Column('keyword', String, nullable=False),
+            )
+
+            transaction = Table(
+                'storeTransaction',
+                metadata,
+                Column('id', Integer, primary_key=True),
+                Column('sender', String(20), nullable=False),
+                Column('time', DateTime, nullable=False),
+                Column('foodId', None, ForeignKey('foodType.id'), nullable=False),
+                Column('amount', Integer, nullable=False),
+            )
+
+            metadata.create_all(self.engine)
 
     def getType(self) -> List[Tuple[int, str]]:
-        data = self.cursor.execute('SELECT * FROM foodType')
+        data = self.engine.execute('SELECT * FROM foodType')
         return data.fetchall()
 
     def addType(self, name: str) -> None:
-        self.cursor.execute('INSERT INTO foodType(name) VALUES (?)', (name, ))
-        self.conn.commit()
+        self.engine.execute('INSERT INTO foodType(name) VALUES (?)', (name, ))
 
     def getTypeInfo(self, type_id: int) -> str:
-        data = self.cursor.execute('SELECT name FROM foodType WHERE id = ?', (type_id, ))
+        data = self.engine.execute('SELECT name FROM foodType WHERE id = ?', (type_id, ))
         return data.fetchone()
 
     def getKeyword(self) -> List[Tuple[int, int, str]]:
-        data = self.cursor.execute('SELECT * FROM keyword')
+        data = self.engine.execute('SELECT * FROM keyword')
         return data.fetchall()
 
     def addKeyword(self, type_id: int, keyword: str) -> None:
-        self.cursor.execute('INSERT INTO keyword(foodId, keyword) VALUES (?,?)', (type_id, keyword))
-        self.conn.commit()
+        self.engine.execute('INSERT INTO keyword(foodId, keyword) VALUES (?,?)', (type_id, keyword))
 
-#ayam geprek 4,ayam saos 3
+    def addTransaction(self, sender: str, foodId: int, amount: int) -> None:
+        self.engine.execute(
+            'INSERT INTO storeTransaction(sender, time, foodId, amount) VALUES (?,?,?,?)',
+            (sender, datetime.now(), foodId, amount)
+        )
+
+    def getAllTransactions(self):
+        data = self.engine.execute('SELECT * FROM storeTransaction')
+        return data.fetchall()
 
     def parseInput(self, text_input: str) -> Tuple[int, str, int]:
-        transactions = re.split(',|\n',text_input)
+        logger = logging.getLogger()
+
+        transactions = re.split(',|\n', text_input)
+        transactions = [i.strip() for i in transactions]
         result = []
         for transaction in transactions:
             number_in_text = [int(s) for s in transaction.split() if s.isdigit()]
@@ -100,7 +88,7 @@ class textParser:
 
             item_number = number_in_text[0]
 
-            print('DEBUG: get {} item'.format(item_number))
+            logger.debug("Get {} item".format(item_number))
 
             keyword_row = self.getKeyword()
 
@@ -115,65 +103,60 @@ class textParser:
                 food_match_id = food_id_list[keyword_list.index(matches[0])]
                 food_match_name = self.getTypeInfo(food_match_id)[0]
 
-                print('DEBUG: match = {}'.format(food_match_name))
+                logger.debug('Match = {}'.format(food_match_name))
                 result.append((food_match_id, food_match_name, item_number))
             else:
-                print('DEBUG: no match')
+                logger.debug('No match')
                 raise Exception('No matches')
         return result
 
-    def addTransaction(self, sender: str, foodId: int, amount: int) -> None:
-        self.cursor.execute('INSERT INTO transactions(sender, time, foodId, amount) VALUES (?,?,?,?)', (sender, datetime.now(), foodId, amount))
-        self.conn.commit()
 
-    def getAllTransactions(self):
-        data = self.cursor.execute('SELECT * FROM transactions')
-        return data.fetchall()
-
-class ResponseGenerator():
+class responseGenerator():
     @staticmethod
-    def getHorizontalBorder()->str:
+    def getHorizontalBorder() -> str:
         return ('+--------------------+-------+')
 
     @staticmethod
-    def generateTransactionTable(transaction_list:List)->str: #list of tuple (foodName, amount)
-        response = [ResponseGenerator.getHorizontalBorder()]
+    def generateTransactionTable(
+        transaction_list: List
+    ) -> str:  #list of tuple (foodId, foodName, amount)
+        response = [responseGenerator.getHorizontalBorder()]
         for item in transaction_list:
             item_row = ['| ']
-            item_row.append(item[0]) # foodName
-            item_row.append(' ' * (20-len(item[0])-1))
+            item_row.append(item[1])  # foodName
+            item_row.append(' ' * (20 - len(item[1]) - 1))
             item_row.append('| ')
-            item_row.append(str(item[1])) # amount
-            item_row.append(' ' * (7-len(str(item[1]))-1))
+            item_row.append(str(item[1]))  # amount
+            item_row.append(' ' * (7 - len(str(item[2])) - 1))
             item_row.append('|')
             response.append(''.join(item_row))
-        response.append(ResponseGenerator.getHorizontalBorder())
+        response.append(responseGenerator.getHorizontalBorder())
         return '\n'.join(response)
 
+
 if __name__ == '__main__':
-    # parser = textParser()
-    # parser.addType('ayam geprek')
-    # parser.addType('ayam saos')
+    parser = textParser(db='db_test.sqlite3')
+    parser.addType('ayam geprek')
+    parser.addType('ayam saos')
 
-    # parser.addKeyword(1, 'ayam geprek')
-    # parser.addKeyword(1, 'geprek')
-    # parser.addKeyword(1, 'ayam gprk')
+    parser.addKeyword(1, 'ayam geprek')
+    parser.addKeyword(1, 'geprek')
+    parser.addKeyword(1, 'ayam gprk')
 
-    # parser.addKeyword(2, 'ayam saos')
-    # parser.addKeyword(2, 'ayam bbq')
-    # parser.addKeyword(2, 'ayam blackpaper')
-    # parser.addKeyword(2, 'ayam blackpepper')
+    parser.addKeyword(2, 'ayam saos')
+    parser.addKeyword(2, 'ayam bbq')
+    parser.addKeyword(2, 'ayam blackpaper')
+    parser.addKeyword(2, 'ayam blackpepper')
 
-    # parser.addTransaction('09238492',2,4)
-    # print(parser.getAllTransactions())
+    parser.addTransaction('09238492', 1, 4)
 
-    a=[('Ayam Geprek',5)]
-    print(ResponseGenerator.generateTransactionTable(a))
+    # a = [('Ayam Geprek', 5)]
+    # print(ResponseGenerator.generateTransactionTable(a))
 
-    # print(parser.parseInput('Ayam geprek 1'))
-    # print(parser.parseInput('Ayam gprk 2'))
-    # print(parser.parseInput('gprk 3'))
-    # print(parser.parseInput('geprek 4'))
+    print(parser.parseInput('Ayam geprek 1'))
+    print(parser.parseInput('Ayam gprk 2'))
+    print(parser.parseInput('gprk 3'))
+    print(parser.parseInput('geprek 4'))
 
-    # print(parser.parseInput('aym bbq 5'))
-    # print(parser.parseInput('ayam blckpaper 6'))
+    print(parser.parseInput('aym bbq 5'))
+    print(parser.parseInput('ayam blckpaper 6'))
