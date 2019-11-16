@@ -56,7 +56,7 @@ class faceParser():
 
         test_feature = test_feature[0]
 
-        result_list = face_recognition.compare_faces(face_features, test_feature)
+        result_list = face_recognition.compare_faces(face_features, test_feature, tolerance=0.4)
 
         result_face_index = [i for i, result in enumerate(result_list) if result]
 
