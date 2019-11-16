@@ -19,7 +19,7 @@ class Record():
 
     def addPresence(self, sender: str) -> None:
         self.engine.execute(
-            'INSERT INTO presenceEmploree(sender, time) VALUES (?,?)', (sender, datetime.now())
+            'INSERT INTO presenceEmployee(sender, time) VALUES (?,?)', (sender, datetime.now())
         )
 
     def getAllTransactions(self):

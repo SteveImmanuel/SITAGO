@@ -1,8 +1,10 @@
 import mimetypes
 import os
+import requests
+import logging
+import sys
 from urllib.parse import urlparse
 from flask import Flask, request
-import requests
 from twilio.twiml.messaging_response import MessagingResponse
 from face import FaceParser
 from text import TextParser
@@ -10,6 +12,8 @@ from record import Record
 from responseGenerator import ResponseGenerator
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData, Column, Integer, String, Table, ForeignKey, DateTime
+
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format='%(levelname)s: %(message)s')
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///sitago.db'
@@ -29,7 +33,7 @@ def hello():
 def reply_whatsapp():
     num_media = int(request.values.get('NumMedia'))
     request_message = request.values.get('Body')
-    sender = request.values.get('from')
+    sender = request.values.get('From')
     response = MessagingResponse()
 
     if not num_media:  #process non image
