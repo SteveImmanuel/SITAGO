@@ -5,15 +5,21 @@ from flask import Flask, request
 import requests
 from twilio.twiml.messaging_response import MessagingResponse
 from face import faceParser
-from text import textParser
+from text import textParser, responseGenerator
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-requestParser = textParser('dbSITAGO')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///sitago.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+requestParser = textParser(engine=db.engine)
 imageParser = faceParser()
+
 
 @app.route('/')
 def hello():
     return 'Hello World'
+
 
 @app.route('/whatsapp', methods=['GET', 'POST'])
 def reply_whatsapp():
@@ -22,15 +28,17 @@ def reply_whatsapp():
     sender = request.values.get('from')
     response = MessagingResponse()
 
-    if not num_media: #process non image
-        foodId, foodName, amount = requestParser.parseInput(request_message)
-        if foodId != None:
-            requestParser.addTransaction(sender, foodId, amount)
-            response.message('Transaksi {} {} buah berhasil ditambahkan'.format(foodName, amount)) # generate success message
-        else:
+    if not num_media:  #process non image
+        try:
+            transactions = requestParser.parseInput(request_message)
+            for transaction in transactions:
+                requestParser.addTransaction(transaction[0], transaction[1], transaction[2])
+            response_message = responseGenerator.generateTransactionTable(transactions)
+            response.message(response_message)  # generate success message
+        except:
             response.message('Pesan anda tidak dikenali, coba lagi.')
 
-    else: #process image
+    else:  #process image
         media_files = []
         for idx in range(num_media):
             media_url = request.values.get(f'MediaUrl{idx}')
@@ -49,10 +57,11 @@ def reply_whatsapp():
             response.message('Wajah anda tidak dikenali, coba lagi.')
         else:
             response.message('Terima kasih {}, kamu sudah diabsen!'.format(person))
-    
+
     return str(response)
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     requestParser.addType('ayam geprek')
     requestParser.addType('ayam saos')
 
@@ -65,4 +74,3 @@ if __name__=='__main__':
     requestParser.addKeyword(2, 'ayam blackpaper')
     requestParser.addKeyword(2, 'ayam blackpepper')
     app.run(debug=True)
-
