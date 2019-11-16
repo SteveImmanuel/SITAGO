@@ -65,13 +65,12 @@ def reply_whatsapp():
             with open(file_path, 'wb') as f:
                 f.write(req.content)
 
-            record.addPresence(sender)
-
         try:
             person = imageParser.testFace(file_path)
             if person == None:
                 response.message('Wajah anda tidak cocok, coba lagi.')
             else:
+                record.addPresence(sender)
                 response.message('Terima kasih {}, kamu sudah diabsen!'.format(person))
         except:
             response.message('Wajah tidak terdeteksi, coba lagi. ')
