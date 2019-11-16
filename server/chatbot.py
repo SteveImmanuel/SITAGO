@@ -7,6 +7,8 @@ from twilio.twiml.messaging_response import MessagingResponse
 from face import faceParser
 from text import textParser, responseGenerator
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import MetaData, Column, Integer, String, Table
+from hashlib import md5
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///sitago.db'
@@ -49,8 +51,22 @@ def reply_whatsapp():
             file_extension = mimetypes.guess_extension(mime_type)
             media_sid = os.path.basename(urlparse(media_url).path)
             file_path = f'received_images/{media_sid}{file_extension}'
+
+            md5_hasher = md5()
+            md5_hasher.update(req.content)
+
+            md5_hash = md5_hasher.hexdigest()
+
+            result = db.engine.execute('SELECT * FROM imageHash WHERE hash = ?', (md5_hash, ))
+
+            if len(result.fetchall()) >= 1:
+                response.message('PERINGATAN!!! Anda menggunakan foto yang sama!')
+                return str(response)
+
             with open(file_path, 'wb') as f:
                 f.write(req.content)
+
+            db.engine.execute('INSERT INTO imageHash(hash) VALUES (?)', (md5_hash, ))
         try:
             person = imageParser.testFace(file_path)
             if person == None:
@@ -63,6 +79,17 @@ def reply_whatsapp():
 
 
 if __name__ == '__main__':
+    metadata = MetaData()
+
+    image_hash = Table(
+        'imageHash',
+        metadata,
+        Column('id', Integer, primary_key=True),
+        Column('hash', String(32), nullable=False),
+    )
+
+    metadata.create_all(db.engine)
+
     requestParser.addType('ayam geprek')
     requestParser.addType('ayam saos')
 
