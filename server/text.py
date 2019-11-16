@@ -125,7 +125,7 @@ class responseGenerator():
             item_row.append(item[1])  # foodName
             item_row.append(' ' * (20 - len(item[1]) - 1))
             item_row.append('| ')
-            item_row.append(str(item[1]))  # amount
+            item_row.append(str(item[2]))  # amount
             item_row.append(' ' * (7 - len(str(item[2])) - 1))
             item_row.append('|')
             response.append(''.join(item_row))

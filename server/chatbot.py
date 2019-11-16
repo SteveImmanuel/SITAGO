@@ -51,13 +51,14 @@ def reply_whatsapp():
             file_path = f'received_images/{media_sid}{file_extension}'
             with open(file_path, 'wb') as f:
                 f.write(req.content)
-
-        person = imageParser.testFace(file_path)
-        if person == None:
-            response.message('Wajah anda tidak dikenali, coba lagi.')
-        else:
-            response.message('Terima kasih {}, kamu sudah diabsen!'.format(person))
-
+        try:
+            person = imageParser.testFace(file_path)
+            if person == None:
+                response.message('Wajah anda tidak cocok, coba lagi.')
+            else:
+                response.message('Terima kasih {}, kamu sudah diabsen!'.format(person))
+        except:
+            response.message('Wajah tidak terdeteksi, coba lagi. ')
     return str(response)
 
 
