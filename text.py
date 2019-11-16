@@ -17,34 +17,34 @@ class textParser:
             db_name = kwargs['db'] if 'db' in kwargs else 'db.sqlite3'
             self.engine = create_engine('sqlite:///{}'.format(db_name))
 
-            metadata = MetaData()
+        metadata = MetaData()
 
-            food_type = Table(
-                'foodType',
-                metadata,
-                Column('id', Integer, primary_key=True),
-                Column('name', String, nullable=False),
-            )
+        food_type = Table(
+            'foodType',
+            metadata,
+            Column('id', Integer, primary_key=True),
+            Column('name', String, nullable=False),
+        )
 
-            keyword = Table(
-                'keyword',
-                metadata,
-                Column('id', Integer, primary_key=True),
-                Column('foodId', None, ForeignKey('foodType.id'), nullable=False),
-                Column('keyword', String, nullable=False),
-            )
+        keyword = Table(
+            'keyword',
+            metadata,
+            Column('id', Integer, primary_key=True),
+            Column('foodId', None, ForeignKey('foodType.id'), nullable=False),
+            Column('keyword', String, nullable=False),
+        )
 
-            transaction = Table(
-                'storeTransaction',
-                metadata,
-                Column('id', Integer, primary_key=True),
-                Column('sender', String(20), nullable=False),
-                Column('time', DateTime, nullable=False),
-                Column('foodId', None, ForeignKey('foodType.id'), nullable=False),
-                Column('amount', Integer, nullable=False),
-            )
+        transaction = Table(
+            'storeTransaction',
+            metadata,
+            Column('id', Integer, primary_key=True),
+            Column('sender', String(20), nullable=False),
+            Column('time', DateTime, nullable=False),
+            Column('foodId', None, ForeignKey('foodType.id'), nullable=False),
+            Column('amount', Integer, nullable=False),
+        )
 
-            metadata.create_all(self.engine)
+        metadata.create_all(self.engine)
 
     def getType(self) -> List[Tuple[int, str]]:
         data = self.engine.execute('SELECT * FROM foodType')
@@ -117,9 +117,8 @@ class responseGenerator():
         return ('+--------------------+-------+')
 
     @staticmethod
-    def generateTransactionTable(
-        transaction_list: List
-    ) -> str:  #list of tuple (foodId, foodName, amount)
+    def generateTransactionTable(transaction_list: List[Tuple[int, str, int]]) -> str:
+        #list of tuple (foodId, foodName, amount)
         response = [responseGenerator.getHorizontalBorder()]
         for item in transaction_list:
             item_row = ['| ']
