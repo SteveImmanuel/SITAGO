@@ -1,13 +1,19 @@
+# Destination path  
+destination = 'D:/Kuliah/Semester 5/SI/implementasi_akhir/SITAGO/server/received_images'
+# Source path  
+source = 'C:/Users/ASUS/AppData/Local/OpenERP S.A/Odoo/filestore/odooDatabase'
+
 import psycopg2
 import pgpubsub
+import shutil
 
 # Insert function and trigger to database
 try:
-	connection = psycopg2.connect(user="boas",
-                                  password="1304513045",
+	connection = psycopg2.connect(user="postgres",
+                                  password="postgres",
                                   host="127.0.0.1",
                                   port="5432",
-                                  database="test")
+                                  database="odooDatabase")
 	if(connection):
 		print("Connected to postgres successfully!")
 	cursor = connection.cursor()
@@ -17,7 +23,7 @@ try:
 								DECLARE
 								BEGIN
 									IF NEW.res_field = 'image_1920' AND NEW.res_model='hr.employee' AND OLD.store_fname <> NEW.store_fname THEN
-								 	 	PERFORM pg_notify('insertCaugthNotify', NEW.store_fname);
+								 	 	PERFORM pg_notify('insertCaugthNotify', NEW.res_id || ',' || NEW.store_fname );
 								 	 END IF;
 								  RETURN NEW;
 								END;
@@ -28,7 +34,7 @@ try:
 								DECLARE
 								BEGIN
 									IF NEW.res_field = 'image_1920' AND NEW.res_model='hr.employee' THEN
-								 	 	PERFORM pg_notify('insertCaugthNotify', NEW.store_fname);
+								 	 	PERFORM pg_notify('insertCaugthNotify', NEW.res_id || ',' || NEW.store_fname );
 								 	 END IF;
 								  RETURN NEW;
 								END;
@@ -61,14 +67,30 @@ except (Exception, psycopg2.Error) as error :
     print ("Error while fetching data from PostgreSQL", error)
 
 
-pubsub = pgpubsub.connect(user='postgres', database='test', password='1304513045')
+pubsub = pgpubsub.connect(user='postgres', database='odooDatabase', password='postgres')
 if(pubsub):
 	print("Server is listening...")
 
 pubsub.listen('"insertCaugthNotify"')
 
 for e in pubsub.events(): 
-    print (e.payload)
+	print (e.payload)
+	id, path = e.payload.split(',')
+	employee_name_query = "SELECT name FROM hr_employee WHERE id = " + id + ";"
+	cursor.execute(employee_name_query)
+	# cursor.execute("SELECT name FROM hr_employee WHERE id = %s ;", (id))
+	record = cursor.fetchone()
+	for attribute in record:
+		print(attribute)
+		emp_name = attribute
+
+
+	source_ = source + '/' +  path
+	destination_ = destination + '/' + emp_name + '.jpg'
+	print(source_)
+	print(destination)
+	dest = shutil.copy(source_, destination_)
+	print(dest)
 
 
 
