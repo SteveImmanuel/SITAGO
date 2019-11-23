@@ -1,6 +1,6 @@
 {
     "pg": {
-        "user": "postgres",
+        "user": "joshua",
         "password": "password",
         "host": "127.0.0.1",
         "port": "5432",

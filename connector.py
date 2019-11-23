@@ -96,7 +96,7 @@ def connector(queue: Queue, config: Dict):
         print(destination_path)
 
         dest = shutil.copy(source_path, destination_path)
-        queue.put(destination_path)
+        queue.put((destination_path,emp_name))
         print(dest)
 
 

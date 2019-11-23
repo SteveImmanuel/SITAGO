@@ -150,6 +150,7 @@ if __name__ == '__main__':
 
     threading.Thread(target=connector, args=(profile_queue, config)).start()
     while True:
+        path, name = profile_queue.get()
 
-        get = profile_queue.get()
-        print(get)
+        print('get new employee')
+        imageParser.createFaceData(path, name)
