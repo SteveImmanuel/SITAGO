@@ -1,4 +1,6 @@
 import psycopg2
+import json
+import time
 from typing import Dict
 
 
@@ -21,27 +23,27 @@ class connector_util():
     def __del__(self):
         self.connection.close()
 
-    def check_in(self, emp_id):
+    def check_in(self, emp_id: int):
         query_insert_check_in = """ INSERT INTO 
                         hr_attendance(employee_id,check_in,create_uid,create_date,write_uid,write_date) 
-                        VALUES (""" + emp_id + ",now(),2,now(),2,now());"
+                        VALUES (""" + str(emp_id) + ",now(),2,now(),2,now());"
         try:
             self.cursor.execute(query_insert_check_in)
             self.connection.commit()
         except (Exception, psycopg2.Error) as error:
             print("Error while fetching data from PostgreSQL", error)
 
-    def check_out(self, emp_id):
+    def check_out(self, emp_id: int):
         query_update_check_out = """ UPDATE hr_attendance   
                                     SET check_out = now(), worked_hours = EXTRACT(EPOCH FROM now()-check_in)/3600
-                                    WHERE employee_id =""" + emp_id + ";"
+                                    WHERE employee_id =""" + str(emp_id) + ";"
         try:
             self.cursor.execute(query_update_check_out)
             self.connection.commit()
         except (Exception, psycopg2.Error) as error:
             print("Error while fetching data from PostgreSQL", error)
 
-    def insert_sale_order(self, name):
+    def insert_sale_order(self, name: str):
         query_insert_sale_order = """INSERT INTO public.sale_order(
                                     name, state, date_order, require_signature, require_payment, 
                                     create_date, user_id, partner_id, partner_invoice_id, partner_shipping_id, 
@@ -50,9 +52,10 @@ class connector_util():
                                     VALUES (""" + name + """, 'draft', NOW(), true, true, 
                                             NOW(), 2, 1, 1, 1, 
                                             1, 'no', 0 , 0,  0 , 
-                                            1.000000, 1, 1, 2, 2, NOW());"""
+                                            1.000000, 1, 1, 2, 2, NOW()) RETURNING id;"""
         try:
             self.cursor.execute(query_insert_sale_order)
+            return self.cursor.fetchone()[0]
         except (Exception, psycopg2.Error) as error:
             print("Error while fetching data from PostgreSQL", error)
 
@@ -72,9 +75,17 @@ class connector_util():
                                         untaxed_amount_invoiced, untaxed_amount_to_invoice, salesman_id, currency_id, company_id, 
                                         order_partner_id, state, customer_lead, create_uid, create_date, 
                                         write_uid, write_date)
-                                        VALUES (""" + order_id + """, '', 10, 'no',""" + price_unit + """, 
-                                                """ + amount_total + """, 0, 2000,""" + price_unit + "," + price_unit + """, 
-                                                """ + price_unit + """, 0,""" + product_id + """,""" + product_uom_qty + """, 1, 
+                                        VALUES (""" + str(order_id) + """, '', 10, 'no',""" + str(
+            price_unit
+        ) + """, 
+                                                """ + str(amount_total) + """, 0, 2000,""" + str(
+            price_unit
+        ) + "," + str(price_unit) + """, 
+                                                """ + str(price_unit) + """, 0,""" + str(
+            product_id
+        ) + """,""" + str(
+            product_uom_qty
+        ) + """, 1, 
                                                 'manual', 0, 0, 0, 0, 
                                                 0, 0, 2, 12, 1, 
                                                 1, 'draft', 0, 2, NOW(), 
@@ -85,8 +96,10 @@ class connector_util():
                             AS $$
                             BEGIN
                             UPDATE sale_order
-                            SET amount_total = OLD.amount_total + """ + amount_total + """
-                            , amount_untaxed = OLD.amount_untaxed """ + amount_total + """;
+                            SET amount_total = OLD.amount_total + """ + str(amount_total) + """
+                            , amount_untaxed = OLD.amount_untaxed """ + str(
+            amount_total
+        ) + """;
                             RETURN NULL;
                             END $$; """
 
@@ -104,3 +117,21 @@ class connector_util():
             self.cursor.execute(query_insert_sale_order_line)
         except (Exception, psycopg2.Error) as error:
             print("Error while fetching data from PostgreSQL", error)
+
+
+if __name__ == '__main__':
+    config = {}
+
+    with open('config.json') as json_file:
+        config = json.load(json_file)
+
+    connector = connector_util(config)
+
+    print('Test check')
+    connector.check_in(2)
+    time.sleep(5)
+    connector.check_out(2)
+
+    print('Test transaction')
+    connector.insert_sale_order("Day 1")
+    connector.insert_sale_order_line()
