@@ -9,5 +9,14 @@
     "path": {
         "dest": "/home/joshua/Dev/SITAGO/temp_image",
         "source": "/home/joshua/.local/share/Odoo/filestore/sitago"
+    },
+    "employeeCount" : 7,
+    "employee":{
+        "joshua": 4,
+        "Vania 2": 7
+    },
+    "foodPrice":{
+        "Ayam Geprek" : 15000,
+        "Ayam Saos" : 16000
     }
 }

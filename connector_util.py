@@ -4,7 +4,7 @@ import time
 from typing import Dict
 
 
-class connector_util():
+class ConnectorUtil():
     def __init__(self, config: Dict):
         try:
             self.connection = psycopg2.connect(
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     with open('config.json') as json_file:
         config = json.load(json_file)
 
-    connector = connector_util(config)
+    connector = ConnectorUtil(config)
 
     print('Test check')
     connector.check_in(2)

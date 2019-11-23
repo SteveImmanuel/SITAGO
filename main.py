@@ -5,6 +5,7 @@ import logging
 import sys
 import threading
 import json
+import datetime
 from urllib.parse import urlparse
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
@@ -16,6 +17,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData, Column, Integer, String, Table, ForeignKey, DateTime
 from queue import Queue
 from connector import connector
+from connector_util import ConnectorUtil
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format='%(levelname)s: %(message)s')
 
@@ -27,8 +29,22 @@ requestParser = TextParser(engine=db.engine)
 imageParser = FaceParser()
 record = Record(engine=db.engine)
 
+config = {}
+
+with open('config.json') as json_file:
+    config = json.load(json_file)
+
+odoo_query = ConnectorUtil(config)
 profile_queue = Queue()
 
+order_global_id = 0
+
+
+def daily_reset():
+    global order_global_id
+    order_global_id = odoo_query.insert_sale_order(datetime.datetime.now().isoformat())
+    for i in range(config['employeeCount']):
+        odoo_query.check_out(i)
 
 @app.route('/')
 def hello():
@@ -46,10 +62,14 @@ def reply_whatsapp():
         try:
             transactions = requestParser.parseInput(request_message)
             for transaction in transactions:
+                print(transaction)
                 record.addTransaction(sender, transaction[0], transaction[2])
-            response_message = responseGenerator.generateTransactionTable(transactions)
+                odoo_query.insert_sale_order_line(order_global_id, config['foodPrice'][transaction[1]], transaction[2],transaction[1])
+            
+            response_message = ResponseGenerator.generateTransactionTable(transactions)
             response.message(response_message)  # generate success message
-        except:
+        except Exception as e:
+            print(e)
             response.message('Pesan anda tidak dikenali, coba lagi.')
 
     else:  #process image
@@ -78,6 +98,7 @@ def reply_whatsapp():
             else:
                 record.addPresence(sender)
                 response.message('Terima kasih {}, kamu sudah diabsen!'.format(person))
+                odoo_query.check_in(config['employee'][person])
         except:
             response.message('Wajah tidak terdeteksi, coba lagi. ')
     return str(response)
@@ -128,8 +149,8 @@ if __name__ == '__main__':
 
     metadata.create_all(db.engine)
 
-    requestParser.addType('ayam geprek')
-    requestParser.addType('ayam saos')
+    requestParser.addType('Ayam Geprek')
+    requestParser.addType('Ayam Saos')
 
     requestParser.addKeyword(1, 'ayam geprek')
     requestParser.addKeyword(1, 'geprek')
@@ -141,14 +162,11 @@ if __name__ == '__main__':
     requestParser.addKeyword(2, 'ayam blackpepper')
     threading.Thread(target=app.run).start()
 
-    print('a')
-
-    config = {}
-
-    with open('config.json') as json_file:
-        config = json.load(json_file)
-
     threading.Thread(target=connector, args=(profile_queue, config)).start()
+
+    daily_reset()
+    timer = threading.Timer(3600*24, daily_reset).start()
+
     while True:
         path, name = profile_queue.get()
 
