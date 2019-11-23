@@ -89,8 +89,8 @@ def connector(queue: Queue, config: Dict):
             print(attribute)
             emp_name = attribute
 
-        source_path = config.path.source + '/' + path
-        destination_path = config.path.dest + '/' + emp_name + '.jpg'
+        source_path = config['path']['source'] + '/' + path
+        destination_path = config['path']['dest'] + '/' + emp_name
 
         print(source_path)
         print(destination_path)

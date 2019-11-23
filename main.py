@@ -149,7 +149,6 @@ if __name__ == '__main__':
         config = json.load(json_file)
 
     threading.Thread(target=connector, args=(profile_queue, config)).start()
-
     while True:
 
         get = profile_queue.get()
