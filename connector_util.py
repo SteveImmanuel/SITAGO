@@ -49,12 +49,13 @@ class connector_util():
                                     create_date, user_id, partner_id, partner_invoice_id, partner_shipping_id, 
                                     pricelist_id, invoice_status, amount_untaxed, amount_tax, amount_total, 
                                     currency_rate, company_id, team_id, create_uid, write_uid, write_date)
-                                    VALUES (""" + name + """, 'draft', NOW(), true, true, 
+                                    VALUES ('""" + name + """', 'draft', NOW(), true, true, 
                                             NOW(), 2, 1, 1, 1, 
                                             1, 'no', 0 , 0,  0 , 
                                             1.000000, 1, 1, 2, 2, NOW()) RETURNING id;"""
         try:
             self.cursor.execute(query_insert_sale_order)
+            self.connection.commit()
             return self.cursor.fetchone()[0]
         except (Exception, psycopg2.Error) as error:
             print("Error while fetching data from PostgreSQL", error)
@@ -64,7 +65,9 @@ class connector_util():
                                 where product_product.product_tmpl_id = product_template.id 
                                 AND product_template.name = '""" + nama_barang + "'; "
 
-        product_id = self.cursor.execute(query_find_product_id)
+        self.cursor.execute(query_find_product_id)
+
+        product_id = self.cursor.fetchone()[0]
         amount_total = price_unit * product_uom_qty
 
         query_insert_sale_order_line = """INSERT INTO public.sale_order_line(
@@ -75,31 +78,21 @@ class connector_util():
                                         untaxed_amount_invoiced, untaxed_amount_to_invoice, salesman_id, currency_id, company_id, 
                                         order_partner_id, state, customer_lead, create_uid, create_date, 
                                         write_uid, write_date)
-                                        VALUES (""" + str(order_id) + """, '', 10, 'no',""" + str(
-            price_unit
-        ) + """, 
-                                                """ + str(amount_total) + """, 0, 2000,""" + str(
-            price_unit
-        ) + "," + str(price_unit) + """, 
-                                                """ + str(price_unit) + """, 0,""" + str(
-            product_id
-        ) + """,""" + str(
-            product_uom_qty
-        ) + """, 1, 
+                                        VALUES (""" + str(order_id) + """, '', 10, 'no',""" + str(price_unit) + """, 
+                                                """ + str(amount_total) + """, 0, 2000,""" + str(price_unit) + "," + str(price_unit) + """, 
+                                                """ + str(price_unit) + """, 0,""" + str(product_id) + """,""" + str(product_uom_qty) + """, 1, 
                                                 'manual', 0, 0, 0, 0, 
                                                 0, 0, 2, 12, 1, 
                                                 1, 'draft', 0, 2, NOW(), 
                                                 2, NOW());"""
-
+        
         query_function = """CREATE OR REPLACE FUNCTION set_amount()
                             RETURNS TRIGGER LANGUAGE plpgsql
                             AS $$
                             BEGIN
                             UPDATE sale_order
-                            SET amount_total = OLD.amount_total + """ + str(amount_total) + """
-                            , amount_untaxed = OLD.amount_untaxed """ + str(
-            amount_total
-        ) + """;
+                            SET amount_total = amount_total + """ + str(amount_total) + """
+                            , amount_untaxed = amount_untaxed + """ + str(amount_total) + """;
                             RETURN NULL;
                             END $$; """
 
@@ -115,6 +108,7 @@ class connector_util():
             self.cursor.execute(drop_trigger)
             self.cursor.execute(query_trigger)
             self.cursor.execute(query_insert_sale_order_line)
+            self.connection.commit()
         except (Exception, psycopg2.Error) as error:
             print("Error while fetching data from PostgreSQL", error)
 
@@ -133,5 +127,7 @@ if __name__ == '__main__':
     connector.check_out(2)
 
     print('Test transaction')
-    connector.insert_sale_order("Day 1")
-    connector.insert_sale_order_line()
+    order_id = connector.insert_sale_order("Day 2")
+    
+    connector.insert_sale_order_line(order_id, 15000, 3, "Ayam Geprek")
+    connector.insert_sale_order_line(order_id, 16000, 6, "Ayam Saos")
