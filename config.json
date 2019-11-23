@@ -18,5 +18,17 @@
     "foodPrice":{
         "Ayam Geprek" : 15000,
         "Ayam Saos" : 16000
+    },
+    "food":{
+        "Ayam Geprek": [
+            "ayam geprek",
+            "geprek",
+            "ayam gprk"
+        ],
+        "Ayam Saos": [
+            "ayam saos",
+            "ayam bbq",
+            "ayam blackpapper"
+        ]
     }
 }

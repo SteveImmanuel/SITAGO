@@ -149,17 +149,12 @@ if __name__ == '__main__':
 
     metadata.create_all(db.engine)
 
-    requestParser.addType('Ayam Geprek')
-    requestParser.addType('Ayam Saos')
+    for idx, entry in enumerate(config['food']):
+        requestParser.addType(entry)
+        temp_keyword = config['food'][entry]
+        for keyword in temp_keyword:
+            requestParser.addKeyword(idx+1, keyword)
 
-    requestParser.addKeyword(1, 'ayam geprek')
-    requestParser.addKeyword(1, 'geprek')
-    requestParser.addKeyword(1, 'ayam gprk')
-
-    requestParser.addKeyword(2, 'ayam saos')
-    requestParser.addKeyword(2, 'ayam bbq')
-    requestParser.addKeyword(2, 'ayam blackpaper')
-    requestParser.addKeyword(2, 'ayam blackpepper')
     threading.Thread(target=app.run).start()
 
     threading.Thread(target=connector, args=(profile_queue, config)).start()
