@@ -41,7 +41,7 @@ class connector_util():
         except (Exception, psycopg2.Error) as error:
             print("Error while fetching data from PostgreSQL", error)
 
-    def insert_sale_order(self, name, amount):
+    def insert_sale_order(self, name):
         query_insert_sale_order = """INSERT INTO public.sale_order(
                                     name, state, date_order, require_signature, require_payment, 
                                     create_date, user_id, partner_id, partner_invoice_id, partner_shipping_id, 
@@ -49,7 +49,7 @@ class connector_util():
                                     currency_rate, company_id, team_id, create_uid, write_uid, write_date)
                                     VALUES (""" + name + """, 'draft', NOW(), true, true, 
                                             NOW(), 2, 1, 1, 1, 
-                                            1, 'no',""" + amount + """, 0,""" + amount + """, 
+                                            1, 'no', 0 , 0,  0 , 
                                             1.000000, 1, 1, 2, 2, NOW());"""
         try:
             self.cursor.execute(query_insert_sale_order)
@@ -62,6 +62,7 @@ class connector_util():
                                 AND product_template.name = '""" + nama_barang + "'; "
 
         product_id = self.cursor.execute(query_find_product_id)
+        amount_total = price_unit * product_uom_qty
 
         query_insert_sale_order_line = """INSERT INTO public.sale_order_line(
                                         order_id, name, sequence, invoice_status, price_unit, 
@@ -72,14 +73,34 @@ class connector_util():
                                         order_partner_id, state, customer_lead, create_uid, create_date, 
                                         write_uid, write_date)
                                         VALUES (""" + order_id + """, '', 10, 'no',""" + price_unit + """, 
-                                                """ + price_unit * product_uom_qty + """, 0, 2000,""" + price_unit + "," + price_unit + """, 
+                                                """ + amount_total + """, 0, 2000,""" + price_unit + "," + price_unit + """, 
                                                 """ + price_unit + """, 0,""" + product_id + """,""" + product_uom_qty + """, 1, 
                                                 'manual', 0, 0, 0, 0, 
                                                 0, 0, 2, 12, 1, 
                                                 1, 'draft', 0, 2, NOW(), 
                                                 2, NOW());"""
 
+        query_function = """CREATE OR REPLACE FUNCTION set_amount()
+                            RETURNS TRIGGER LANGUAGE plpgsql
+                            AS $$
+                            BEGIN
+                            UPDATE sale_order
+                            SET amount_total = OLD.amount_total + """ + amount_total + """
+                            , amount_untaxed = OLD.amount_untaxed """ + amount_total + """;
+                            RETURN NULL;
+                            END $$; """
+
+        drop_trigger = "DROP TRIGGER IF EXISTS automatically_set_amount ON sale_order_line"
+
+        query_trigger = """CREATE TRIGGER automatically_set_amount
+                            AFTER INSERT on sale_order_line
+                            FOR EACH ROW
+                            EXECUTE PROCEDURE set_amount();"""
+
         try:
+            self.cursor.execute(query_function)
+            self.cursor.execute(drop_trigger)
+            self.cursor.execute(query_trigger)
             self.cursor.execute(query_insert_sale_order_line)
         except (Exception, psycopg2.Error) as error:
             print("Error while fetching data from PostgreSQL", error)
