@@ -114,3 +114,5 @@ dmypy.json
 *.face
 *.jpeg
 *.jpg
+
+temp_image

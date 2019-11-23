@@ -1,13 +1,13 @@
 {
     "pg": {
-        "user": "postgres",
-        "password": "postgres",
+        "user": "joshua",
+        "password": "password",
         "host": "127.0.0.1",
-        "port": "5342",
-        "database": "odooDatabase"
+        "port": "5432",
+        "database": "sitago"
     },
     "path": {
-        "dest": "image",
-        "source": "~/.local/share/Odoo/filestore/odoo"
+        "dest": "/home/joshua/Dev/SITAGO/temp_image",
+        "source": "/home/joshua/.local/share/Odoo/filestore/sitago"
     }
 }
