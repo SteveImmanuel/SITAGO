@@ -10,11 +10,11 @@ def connector(queue: Queue, config: Dict):
     # Insert function and trigger to database
     try:
         connection = psycopg2.connect(
-            user=config.pg.user,
-            password=config.pg.password,
-            host=config.pg.host,
-            port=config.pg.port,
-            database=config.pg.database
+            user=config['pg']['user'],
+            password=config['pg']['password'],
+            host=config['pg']['host'],
+            port=config['pg']['port'],
+            database=config['pg']['database']
         )
         if (connection):
             print("Connected to postgres successfully!")
@@ -68,7 +68,11 @@ def connector(queue: Queue, config: Dict):
     except (Exception, psycopg2.Error) as error:
         print("Error while fetching data from PostgreSQL", error)
 
-    pubsub = pgpubsub.connect(user='postgres', database='odooDatabase', password='postgres')
+    pubsub = pgpubsub.connect(
+        user=config['pg']['user'],
+        database=config['pg']['database'],
+        password=config['pg']['password']
+    )
     if (pubsub):
         print("Server is listening...")
 

@@ -139,7 +139,9 @@ if __name__ == '__main__':
     requestParser.addKeyword(2, 'ayam bbq')
     requestParser.addKeyword(2, 'ayam blackpaper')
     requestParser.addKeyword(2, 'ayam blackpepper')
-    app.run(debug=True)
+    threading.Thread(target=app.run).start()
+
+    print('a')
 
     config = {}
 
@@ -149,5 +151,6 @@ if __name__ == '__main__':
     threading.Thread(target=connector, args=(profile_queue, config)).start()
 
     while True:
+
         get = profile_queue.get()
         print(get)

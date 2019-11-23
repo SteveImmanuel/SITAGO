@@ -5,7 +5,7 @@ import sys
 from dataclasses import dataclass
 from typing import List
 
-FACE_DIRECTORY = 'face'
+FACE_DIRECTORY = 'face_model'
 
 
 @dataclass()
