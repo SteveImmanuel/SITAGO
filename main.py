@@ -3,6 +3,8 @@ import os
 import requests
 import logging
 import sys
+import threading
+import json
 from urllib.parse import urlparse
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
@@ -12,6 +14,8 @@ from record import Record
 from responseGenerator import ResponseGenerator
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData, Column, Integer, String, Table, ForeignKey, DateTime
+from queue import Queue
+from connector import connector
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format='%(levelname)s: %(message)s')
 
@@ -22,6 +26,8 @@ db = SQLAlchemy(app)
 requestParser = TextParser(engine=db.engine)
 imageParser = FaceParser()
 record = Record(engine=db.engine)
+
+profile_queue = Queue()
 
 
 @app.route('/')
@@ -134,3 +140,14 @@ if __name__ == '__main__':
     requestParser.addKeyword(2, 'ayam blackpaper')
     requestParser.addKeyword(2, 'ayam blackpepper')
     app.run(debug=True)
+
+    config = {}
+
+    with open('config.json') as json_file:
+        config = json.load(json_file)
+
+    threading.Thread(target=connector, args=(profile_queue, config)).start()
+
+    while True:
+        get = profile_queue.get()
+        print(get)

@@ -2,13 +2,11 @@ import psycopg2
 import pgpubsub
 import shutil
 import json
+from queue import Queue
+from typing import Dict
 
-if __name__ == '__main__':
-    config = {}
 
-    with open('config.json') as json_file:
-        config = json.load(json_file)
-
+def connector(queue: Queue, config: Dict):
     # Insert function and trigger to database
     try:
         connection = psycopg2.connect(
@@ -94,4 +92,14 @@ if __name__ == '__main__':
         print(destination_path)
 
         dest = shutil.copy(source_path, destination_path)
+        queue.put(destination_path)
         print(dest)
+
+
+if __name__ == "__main__":
+    config = {}
+
+    with open('config.json') as json_file:
+        config = json.load(json_file)
+
+    connector(Queue(), config)
