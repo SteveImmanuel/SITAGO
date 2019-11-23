@@ -1,19 +1,20 @@
 import psycopg2
+from typing import Dict
 
 
 class connector_util():
     def __init__(self, config: Dict):
         try:
-            connection = psycopg2.connect(
+            self.connection = psycopg2.connect(
                 user=config['pg']['user'],
                 password=config['pg']['password'],
                 host=config['pg']['host'],
                 port=config['pg']['port'],
                 database=config['pg']['database']
             )
-            if (connection):
+            if (self.connection):
                 print("Connected to postgres successfully!")
-            self.cursor = connection.cursor()
+            self.cursor = self.connection.cursor()
         except (Exception, psycopg2.Error) as error:
             print("Error while fetching data from PostgreSQL", error)
 
@@ -23,6 +24,7 @@ class connector_util():
                         VALUES (""" + emp_id + ",now(),2,now(),2,now());"
         try:
             self.cursor.execute(query_insert_check_in)
+            self.connection.commit()
         except (Exception, psycopg2.Error) as error:
             print("Error while fetching data from PostgreSQL", error)
 
@@ -32,5 +34,9 @@ class connector_util():
                                     WHERE employee_id =""" + emp_id + ";"
         try:
             self.cursor.execute(query_update_check_out)
+            self.connection.commit()
         except (Exception, psycopg2.Error) as error:
             print("Error while fetching data from PostgreSQL", error)
+
+    def __del__(self):
+        self.connection.close()
