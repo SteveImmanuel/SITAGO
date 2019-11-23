@@ -1,0 +1,13 @@
+{
+    "pg": {
+        "user": "postgres",
+        "password": "postgres",
+        "host": "127.0.0.1",
+        "port": "5342",
+        "database": "odooDatabase"
+    },
+    "path": {
+        "dest": "image",
+        "source": "~/.local/share/Odoo/filestore/odoo"
+    }
+}
